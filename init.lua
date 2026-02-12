@@ -2,9 +2,6 @@
 local bindings = {
     { key = "j", app = "Google Chrome" },
     { key = "k", app = "Visual Studio Code" },
-    { key = "l", app = "Cursor"},
-    { key = "p", app = "Preview" },
-    { key = "o", app = "Obsidian" }
 }
 
 for _, b in ipairs(bindings) do
@@ -133,13 +130,34 @@ function focusChromeWindowByName(name)
 end
 
 local chromeWindowHotkeys = {
-    ["1"] = "Home",
-    ["2"] = "Media",
-    ["3"] = "IntPrep",
-    ["4"] = "Hacking",
-    ["5"] = "Study",
-    ["6"] = "SPatriot"
+    ["0"] = "DevBrowser",
 }
+
+local chromeProfiles = {"DevBrowser"}
+
+function focusChromeDefaultProfile()
+    local app = hs.application.find("Google Chrome")
+    for _, win in ipairs(app:allWindows()) do
+        local title = win:title()
+        if title then
+            local isOtherProfile = false
+            for _, profile in ipairs(chromeProfiles) do
+                if string.find(title:lower(), profile:lower()) then
+                    isOtherProfile = true
+                    break
+                end
+            end
+            if not isOtherProfile then
+                win:focus()
+                return
+            end
+        end
+    end
+end
+
+hs.hotkey.bind({"cmd", "ctrl"}, "9", function()
+    focusChromeDefaultProfile()
+end)
 
 for key, name in pairs(chromeWindowHotkeys) do
     hs.hotkey.bind({"cmd", "ctrl"}, key, function()
