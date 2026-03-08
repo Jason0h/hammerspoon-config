@@ -5,7 +5,7 @@ local bindings = {
 }
 
 for _, b in ipairs(bindings) do
-    hs.hotkey.bind({"cmd", "ctrl"}, b.key, function()
+    hs.hotkey.bind({"ctrl"}, b.key, function()
         hs.application.launchOrFocus(b.app)
     end)
 end
@@ -13,113 +13,44 @@ end
 -- window sizing shortcuts
 local windowSizingModifiers = {"cmd", "ctrl", "alt"}
 
-hs.hotkey.bind(windowSizingModifiers, "=", function()
+local function setWindowFrame(xRatio, yRatio, wRatio, hRatio)
     local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-  
-    f.x = max.x
-    f.y = max.y
-    f.w = max.w
-    f.h = max.h
-    win:setFrame(f)
-end)
+    if not win then return end
+    local max = win:screen():frame()
+    win:setFrame({
+        x = max.x + xRatio * max.w,
+        y = max.y + yRatio * max.h,
+        w = wRatio * max.w,
+        h = hRatio * max.h,
+    })
+end
 
-hs.hotkey.bind(windowSizingModifiers, "1", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
+local windowLayouts = {
+    ["="] = {0,   0, 1,   1  }, -- full screen
+    ["1"] = {0,   0, 1/2, 1  }, -- left half
+    ["2"] = {1/2, 0, 1/2, 1  }, -- right half
+    ["3"] = {0,   0, 1/3, 1  }, -- left third
+    ["4"] = {1/3, 0, 1/3, 1  }, -- center third
+    ["5"] = {2/3, 0, 1/3, 1  }, -- right third
+    ["6"] = {0,   0, 2/3, 1  }, -- left two-thirds
+    ["7"] = {1/3, 0, 2/3, 1  }, -- right two-thirds
+}
 
-    f.x = max.x
-    f.y = max.y
-    f.w = max.w / 2
-    f.h = max.h
-    win:setFrame(f)
-end)
-
-hs.hotkey.bind(windowSizingModifiers, "2", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-
-    f.x = max.x + max.w / 2
-    f.y = max.y
-    f.w = max.w / 2
-    f.h = max.h
-    win:setFrame(f)
-end)
-
-hs.hotkey.bind(windowSizingModifiers, "3", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-
-    f.x = max.x
-    f.y = max.y
-    f.w = max.w / 3
-    f.h = max.h
-    win:setFrame(f)
-end)
-
-hs.hotkey.bind(windowSizingModifiers, "4", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-
-    f.x = max.x + max.w / 3
-    f.y = max.y
-    f.w = max.w / 3
-    f.h = max.h
-    win:setFrame(f)
-end)
-
-hs.hotkey.bind(windowSizingModifiers, "5", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-
-    f.x = max.x + 2 * (max.w / 3)
-    f.y = max.y
-    f.w = max.w / 3
-    f.h = max.h
-    win:setFrame(f)
-end)
-
-hs.hotkey.bind(windowSizingModifiers, "6", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-
-    f.x = max.x
-    f.y = max.y
-    f.w = (2 * max.w) / 3
-    f.h = max.h
-    win:setFrame(f)
-end)
-
-hs.hotkey.bind(windowSizingModifiers, "7", function()
-    local win = hs.window.focusedWindow()
-    local f = win:frame()
-    local screen = win:screen()
-    local max = screen:frame()
-
-    f.x = max.x + max.w / 3
-    f.y = max.y
-    f.w = (2 * max.w) / 3
-    f.h = max.h
-    win:setFrame(f)
-end)
+for key, layout in pairs(windowLayouts) do
+    hs.hotkey.bind(windowSizingModifiers, key, function()
+        setWindowFrame(layout[1], layout[2], layout[3], layout[4])
+    end)
+end
 
 -- chrome window shortcuts
-function focusChromeWindowByName(name)
+-- keys map to Chrome profile name substrings; "9" focuses the default (non-profile) window
+local chromeWindowHotkeys = {
+    ["0"] = "DevBrowser",
+}
+
+local function focusChromeWindowByName(name)
     local app = hs.application.find("Google Chrome")
+    if not app then return end
     for _, win in ipairs(app:allWindows()) do
         local title = win:title()
         if title and string.find(title:lower(), name:lower()) then
@@ -129,20 +60,15 @@ function focusChromeWindowByName(name)
     end
 end
 
-local chromeWindowHotkeys = {
-    ["0"] = "DevBrowser",
-}
-
-local chromeProfiles = {"DevBrowser"}
-
-function focusChromeDefaultProfile()
+local function focusChromeDefaultProfile()
     local app = hs.application.find("Google Chrome")
+    if not app then return end
     for _, win in ipairs(app:allWindows()) do
         local title = win:title()
         if title then
             local isOtherProfile = false
-            for _, profile in ipairs(chromeProfiles) do
-                if string.find(title:lower(), profile:lower()) then
+            for _, name in pairs(chromeWindowHotkeys) do
+                if string.find(title:lower(), name:lower()) then
                     isOtherProfile = true
                     break
                 end
@@ -155,12 +81,10 @@ function focusChromeDefaultProfile()
     end
 end
 
-hs.hotkey.bind({"cmd", "ctrl"}, "9", function()
-    focusChromeDefaultProfile()
-end)
+hs.hotkey.bind({"ctrl"}, "9", focusChromeDefaultProfile)
 
 for key, name in pairs(chromeWindowHotkeys) do
-    hs.hotkey.bind({"cmd", "ctrl"}, key, function()
+    hs.hotkey.bind({"ctrl"}, key, function()
         focusChromeWindowByName(name)
     end)
 end
